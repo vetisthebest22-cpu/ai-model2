@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teachable Machine Audio Model</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 60px;
+      background: #f7f7f7;
+    }
+    h2 { color: #333; }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      margin-top: 20px;
+    }
+    button:hover { background-color: #45a049; }
+    #label-container {
+      margin-top: 30px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    #label-container div {
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 6px;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h2>🎤 Teachable Machine Audio Model</h2>
+  <button type="button" onclick="init()">Start Microphone</button>
+  <div id="label-container">🔎 Results will appear here</div>
+
+  <script type="text/javascript">
+    // مسار فولدر الموديل بالضبط
+    const URL = "./tm-my-audio-model/";
+
+    async function createModel() {
+        const checkpointURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        const recognizer = speechCommands.create(
+            "BROWSER_FFT",
+            undefined,
+            checkpointURL,
+            metadataURL
+        );
+
+        await recognizer.ensureModelLoaded();
+        return recognizer;
+    }
+
+    async function init() {
+        try {
+            const recognizer = await createModel();
+            const classLabels = recognizer.wordLabels(); 
+            const labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = "";
+
+            for (let i = 0; i < classLabels.length; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+
+            recognizer.listen(result => {
+                const scores = result.scores;
+                for (let i = 0; i < classLabels.length; i++) {
+                    const classPrediction =
+                        classLabels[i] + ": " + (scores[i] * 100).toFixed(1) + "%";
+                    labelContainer.childNodes[i].innerHTML = classPrediction;
+                }
+            }, {
+                includeSpectrogram: true,
+                probabilityThreshold: 0.75,
+                invokeCallbackOnNoiseAndUnknown: true,
+                overlapFactor: 0.50
+            });
+        } catch (err) {
+            console.error("Microphone or model error:", err);
+            alert("Error accessing microphone or loading model. Check console.");
+        }
+    }
+  </script>
+</body>
+</html>
